@@ -87,7 +87,7 @@ def add_new_number(grid):
     return True
 
 
-# checks whether it is Game Over
+# checks whether it is gameover
 def check_game_over(grid):
     if np.all(grid) == False:
         return False
@@ -109,9 +109,8 @@ def check_win(grid):
     return 2048 in grid
 
 
-# move the grid in specified direction, check for win or lose
-# raises RuntimeError "GO" if the game is in GAME OVER state
-# raises RuntimeError "WIN" if the game is in WIN state
+# move the grid in given direction, check for win/lose
+
 def play_2048(grid, move, score):
     orig_grid = cp.deepcopy(grid)
 
@@ -138,7 +137,7 @@ def play_2048(grid, move, score):
     return (grid, score)
 
 
-# starts a new game by generating two tiles and setting score to 0
+# starts a new game - generating two tiles and setting score to 0
 def new_game():
     score = 0
     grid = np.zeros((4, 4), dtype=int)
@@ -148,7 +147,6 @@ def new_game():
     return (grid, score)
 
 
-# print of the grid
 def print_grid(grid, score):
     print('Score: ', score)
     print("+----+----+----+----+")
@@ -175,7 +173,7 @@ def is_move_possible(grid, move):
         temp_grid, _ = move_down(temp_grid, 0)
     return not np.array_equal(grid, temp_grid)
 
-# Algorithm to prioritize upper right corner moves
+
 def prioritize_upper_right(grid, score):
     directions = ['up', 'right', 'left', 'down']
     for move in directions:
@@ -228,10 +226,58 @@ def prioritize_lower_right(grid, score):
             return grid, score
     return grid, score
 
+def monte_carlo_simulation(grid, score, num_simulations=100, max_moves=1000):
+    total_score = 0
+    for _ in range(num_simulations):
+        sim_grid, sim_score = cp.deepcopy(grid), score
+        for _ in range(max_moves):
+            direction = np.random.choice(('left', 'right', 'up', 'down'))
+            try:
+                sim_grid, sim_score = play_2048(sim_grid, direction, sim_score)
+            except RuntimeError as inst:
+                if str(inst) in ["GO", "WIN"]:
+                    break
+        total_score += sim_score
+    return total_score / num_simulations
+
+def monte_carlo_solver(grid, score):
+    best_move = None
+    best_score = -1
+    for move in ['left', 'right', 'up', 'down']:
+        if is_move_possible(grid, move):
+            sim_grid, sim_score = cp.deepcopy(grid), score
+            sim_grid, sim_score = play_2048(sim_grid, move, sim_score)
+            avg_score = monte_carlo_simulation(sim_grid, sim_score)
+            if avg_score > best_score:
+                best_score = avg_score
+                best_move = move
+    if best_move:
+        grid, score = play_2048(grid, best_move, score)
+    return grid, score
 
 
-with open("results.csv","w") as f:
+with open("results.csv", "w") as f:
     f.write("Type;First_direction;Try;Score;Moves;Status;Category\n")
+
+    for repete in range(30):
+        # Monte Carlo solver
+        grid, score = new_game()
+        first_direction = None
+        game_over = False
+        for i in range(1000):
+            if first_direction is None:
+                first_direction = 'left'
+            try:
+                grid, score = monte_carlo_solver(grid, score)
+            except RuntimeError as inst:
+                status = "Loose" if str(inst) == "GO" else "Win"
+                print(f"Monte Carlo {status} in ", (i + 1), " moves")
+                f.write(f"Monte_Carlo;{first_direction};{repete};{score};{i + 1};{status};MonteCarlo\n")
+                game_over = True
+                break
+        if not game_over:
+            print(f"Monte Carlo GAME OVER in 1000 moves")
+            f.write(f"Monte_Carlo;{first_direction};{repete};{score};1000;Loose;MonteCarlo\n")
 
     for repete in range(30):
         #Random direction solver

@@ -4,6 +4,21 @@ import matplotlib.pyplot as plt
 # Read the CSV file
 data = pd.read_csv('results.csv', delimiter=';')
 
+
+data['Win'] = data['Status'] == 'Win'
+win_lose_ratio = data.groupby('Category')['Win'].mean().reset_index()
+
+# Plot win/lose ratio by Category
+plt.figure(figsize=(12, 8))
+plt.bar(win_lose_ratio['Category'], win_lose_ratio['Win'])
+plt.xlabel('Category')
+plt.ylabel('Win/Lose Ratio')
+plt.title('Win/Lose Ratio by Category')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('win_lose_ratio_by_category.png')
+plt.show()
+
 # Group data by Type and Category, and calculate the average score and moves
 grouped_data = data.groupby(['Type', 'Category']).agg({'Score': 'mean', 'Moves': 'mean'}).reset_index()
 
@@ -40,6 +55,7 @@ plt.figure(figsize=(12, 8))
 for category in data['Category'].unique():
     subset = data[data['Category'] == category]
     plt.hist(subset['Score'], bins=20, alpha=0.5, label=category)
+
 plt.xlabel('Score')
 plt.ylabel('Frequency')
 plt.title('Score Distribution by Type and Category')
